@@ -4,6 +4,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Dict, List, Optional
 from src.config import ArxivSettings
+from src.schemas.arxiv.paper import ArxivPaper
 
 class ArxivClient:
     """Client for fetching papers from arXiv API"""
