@@ -14,4 +14,30 @@ class ArxivClient:
 
     @cached_property
     def pdf_cache_dir(self)->Path:
-        cache_dir=Path()
+        cache_dir=Path(self.__settings.pdf_cache_dir)
+        cache_dir.mkdir(parents=True,exist_ok=True)
+        return cache_dir
+    
+    @property
+    def base_url(self)->str:
+        return self.__settings.base_url
+    
+    @property
+    def namespaces(self)->dict:
+        return self.__settings.namespaces
+    
+    @property
+    def rate_limit_delay(self)->float:
+        return self.__settings.rate_limit_delay
+    
+    @property
+    def timeout_seconds(self)->int:
+        return self.__settings.timeout_seconds
+    
+    @property
+    def max_results(self)->int:
+        return self.__settings.max_results
+    
+    @property
+    def search_category(self)->str:
+        return self.__settings.search_category
