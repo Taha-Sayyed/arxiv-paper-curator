@@ -63,8 +63,8 @@ class ArxivClient:
             start:int=0,
             sort_by: str = "submittedDate",
             sort_order: str = "descending",
-            from_date: Optional[str] = None,
-            to_date: Optional[str] = None,
+            from_date: Optional[str] = None, #Filter papers submitted after this date (format: YYYYMMDD)
+            to_date: Optional[str] = None, #Filter papers submitted before this date (format: YYYYMMDD)
 
     )->List[ArxivPaper]: #List of ArxivPaper objects for the configured category
         if max_results is None:
