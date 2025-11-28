@@ -268,7 +268,56 @@ class ArxivClient:
             logger.error(f"Failed to parse entry: {e}")
             return None
         
+    # Extract text from XML element safely.
+
+    def _get_text(self, element: ET.Element, path: str, clean_newlines: bool = False) -> str:
+        
+        elem = element.find(path, self.namespaces)
+        if elem is None or elem.text is None:
+            return ""
+
+        text = elem.text.strip()
+        return text.replace("\n", " ") if clean_newlines else text
     
+    #Extract arXiv ID from entry
+    def _get_arxiv_id(self, entry: ET.Element) -> Optional[str]:
+        
+        id_elem = entry.find("atom:id", self.namespaces)
+        if id_elem is None or id_elem.text is None:
+            return None
+        return id_elem.text.split("/")[-1]
+    
+    #Extract author names from entry
+    def _get_authors(self, entry: ET.Element) -> List[str]:
+       
+        authors = []
+        for author in entry.findall("atom:author", self.namespaces):
+            name = self._get_text(author, "atom:name")
+            if name:
+                authors.append(name)
+        return authors
+    
+    #Extract categories from entry
+    def _get_categories(self, entry: ET.Element) -> List[str]:
+      
+        categories = []
+        for category in entry.findall("atom:category", self.namespaces):
+            term = category.get("term")
+            if term:
+                categories.append(term)
+        return categories
+    
+    #Extract PDF URL from entry links
+    def _get_pdf_url(self, entry: ET.Element) -> str:
+        
+        for link in entry.findall("atom:link", self.namespaces):
+            if link.get("type") == "application/pdf":
+                url = link.get("href", "")
+                # Convert HTTP to HTTPS for arXiv URLs
+                if url.startswith("http://arxiv.org/"):
+                    url = url.replace("http://arxiv.org/", "https://arxiv.org/")
+                return url
+        return ""
 
 
 
