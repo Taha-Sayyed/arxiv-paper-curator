@@ -236,6 +236,39 @@ class ArxivClient:
             logger.error(f"Unexpected error parsing arXiv response: {e}")
             raise ArxivParseError(f"Unexpected error parsing arXiv response: {e}")
 
+    # Defining the _parse_single_entry used above
+    #Parse a single entry from arXiv XML response.
+
+    def _parse_single_entry(self, entry: ET.Element) -> Optional[ArxivPaper]:
+        try:
+            # Extract basic metadata
+            #All _get_.. Method defined below
+            arxiv_id = self._get_arxiv_id(entry)
+            if not arxiv_id:
+                return None
+
+            title = self._get_text(entry, "atom:title", clean_newlines=True)
+            authors = self._get_authors(entry)
+            abstract = self._get_text(entry, "atom:summary", clean_newlines=True)
+            published = self._get_text(entry, "atom:published")
+            categories = self._get_categories(entry)
+            pdf_url = self._get_pdf_url(entry)
+
+            return ArxivPaper(
+                arxiv_id=arxiv_id,
+                title=title,
+                authors=authors,
+                abstract=abstract,
+                published_date=published,
+                categories=categories,
+                pdf_url=pdf_url,
+            )
+        
+        except Exception as e:
+            logger.error(f"Failed to parse entry: {e}")
+            return None
+        
+    
 
 
 
