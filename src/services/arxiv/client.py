@@ -213,8 +213,30 @@ class ArxivClient:
             logger.error(f"Failed to fetch paper {arxiv_id} from arXiv: {e}")
             raise ArxivAPIException(f"Unexpected error fetching paper {arxiv_id} from arXiv: {e}")
         
+    # Defining the parser response fucntion that were used above
+    
+    #Parse arXiv API XML response into ArxivPaper objects
 
-        
+    def _parse_response(self, xml_data: str) -> List[ArxivPaper]:
+        try:
+            root = ET.fromstring(xml_data)
+            entries = root.findall("atom:entry", self.namespaces)
+
+            papers = []
+            for entry in entries:
+                paper = self._parse_single_entry(entry) # Define below
+                if paper:
+                    papers.append(paper)
+
+            return papers
+        except ET.ParseError as e:
+            logger.error(f"Failed to parse arXiv XML response: {e}")
+            raise ArxivParseError(f"Failed to parse arXiv XML response: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error parsing arXiv response: {e}")
+            raise ArxivParseError(f"Unexpected error parsing arXiv response: {e}")
+
+
 
 
 
