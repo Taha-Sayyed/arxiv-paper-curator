@@ -123,3 +123,26 @@ class ArxivClient:
             logger.error(f"Failed to fetch papers from arXiv: {e}")
             raise ArxivAPIException(f"Unexpected error fetching papers from arXiv: {e}")
 
+    async def fetch_papers_with_query(
+        self,
+        search_query: str,
+        max_results: Optional[int] = None,
+        start: int = 0,
+        sort_by: str = "submittedDate",
+        sort_order: str = "descending",
+    ) -> List[ArxivPaper]: #Fetch papers from arXiv using a custom search query
+        if max_results is None:
+            max_results = self.max_results
+        
+        params = {
+            "search_query": search_query,
+            "start": start,
+            "max_results": min(max_results, 2000),
+            "sortBy": sort_by,
+            "sortOrder": sort_order,
+        }
+
+        safe = ":+[]*"  # Don't encode :, +, [, ], *, characters needed for arXiv queries
+        url = f"{self.base_url}?{urlencode(params, quote_via=quote, safe=safe)}"
+
+        
