@@ -189,7 +189,33 @@ class ArxivClient:
 
         url = f"{self.base_url}?{urlencode(params, quote_via=quote, safe=safe)}"
 
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                xml_data = response.text
+
+            papers = self._parse_response(xml_data)
+
+            if papers:
+                return papers[0]
+            else:
+                logger.warning(f"Paper {arxiv_id} not found")
+                return None
+
+        except httpx.TimeoutException as e:
+            logger.error(f"arXiv API timeout for paper {arxiv_id}: {e}")
+            raise ArxivAPITimeoutError(f"arXiv API request timed out for paper {arxiv_id}: {e}")
+        except httpx.HTTPStatusError as e:
+            logger.error(f"arXiv API HTTP error for paper {arxiv_id}: {e}")
+            raise ArxivAPIException(f"arXiv API returned error {e.response.status_code} for paper {arxiv_id}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to fetch paper {arxiv_id} from arXiv: {e}")
+            raise ArxivAPIException(f"Unexpected error fetching paper {arxiv_id} from arXiv: {e}")
         
+
+        
+
 
 
 
