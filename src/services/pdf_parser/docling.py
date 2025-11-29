@@ -92,4 +92,88 @@ class DoclingParser:
             logger.error(f"Error validating PDF {pdf_path}: {e}")
             raise PDFValidationError(f"Error validating PDF {pdf_path}: {e}")
 
-    
+    #Parse PDF using Docling as fallback parser.
+    #Limited to 20 pages to avoid memory issues with large papers.
+    async def parse_pdf(self, pdf_path: Path) -> Optional[PdfContent]:
+        
+        try:
+            # Validate PDF first (includes size and page limits)
+            self._validate_pdf(pdf_path)
+
+            # Warm up models on first use
+            self._warm_up_models()
+
+            # Convert PDF using the modern API
+            # Limit processing to avoid memory issues with large papers
+            result = self._converter.convert(str(pdf_path), max_num_pages=self.max_pages, max_file_size=self.max_file_size_bytes)
+
+            # Extract structured content
+            doc = result.document
+
+            # Extract sections from document structure
+            sections = []
+            current_section = {"title": "Content", "content": ""}
+
+            for element in doc.texts:
+                if hasattr(element, "label") and element.label in ["title", "section_header"]:
+                    # Save previous section if it has content
+                    if current_section["content"].strip():
+                        sections.append(PaperSection(title=current_section["title"], content=current_section["content"].strip()))
+                    # Start new section
+                    current_section = {"title": element.text.strip(), "content": ""}
+                else:
+                    # Add content to current section
+                    if hasattr(element, "text") and element.text:
+                        current_section["content"] += element.text + "\n"
+
+            # Add final section
+            if current_section["content"].strip():
+                sections.append(PaperSection(title=current_section["title"], content=current_section["content"].strip()))
+
+            # Focus on what arXiv API doesn't provide: structured full text content only
+            return PdfContent(
+                sections=sections,
+                figures=[],  # Removed: basic metadata not useful
+                tables=[],  # Removed: basic metadata not useful
+                raw_text=doc.export_to_text(),
+                references=[],
+                parser_used=ParserType.DOCLING,
+                metadata={"source": "docling", "note": "Content extracted from PDF, metadata comes from arXiv API"},
+            )
+
+        except PDFValidationError as e:
+            # Handle size/page limit validation errors gracefully by returning None
+            error_msg = str(e).lower()
+            if "too large" in error_msg or "too many pages" in error_msg:
+                logger.info(f"Skipping PDF processing due to size/page limits: {e}")
+                return None
+            else:
+                # Re-raise other validation errors (corrupted files, etc.)
+                raise
+        except Exception as e:
+            logger.error(f"Failed to parse PDF with Docling: {e}")
+            logger.error(f"PDF path: {pdf_path}")
+            logger.error(f"PDF size: {pdf_path.stat().st_size} bytes")
+            logger.error(f"Error type: {type(e).__name__}")
+
+            # Add specific handling for common issues
+            error_msg = str(e).lower()
+
+            # Note: Page and size limit checks are now handled in _validate_pdf method
+
+            if "not valid" in error_msg:
+                logger.error("PDF appears to be corrupted or not a valid PDF file")
+                raise PDFParsingException(f"PDF appears to be corrupted or invalid: {pdf_path}")
+            elif "timeout" in error_msg:
+                logger.error("PDF processing timed out - file may be too complex")
+                raise PDFParsingException(f"PDF processing timed out: {pdf_path}")
+            elif "memory" in error_msg or "ram" in error_msg:
+                logger.error("Out of memory - PDF may be too large or complex")
+                raise PDFParsingException(f"Out of memory processing PDF: {pdf_path}")
+            elif "max_num_pages" in error_msg or "page" in error_msg:
+                logger.error(f"PDF processing issue likely related to page limits (current limit: {self.max_pages} pages)")
+                raise PDFParsingException(
+                    f"PDF processing failed, possibly due to page limit ({self.max_pages} pages). Error: {e}"
+                )
+            else:
+                raise PDFParsingException(f"Failed to parse PDF with Docling: {e}")
