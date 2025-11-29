@@ -45,5 +45,26 @@ class OllamaClient:
         except Exception as e:
             raise OllamaException(f"Ollama health check failed: {str(e)}")
 
+    #Get list of available models.
+    async def list_models(self) -> List[Dict[str, Any]]:
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(f"{self.base_url}/api/tags")
+
+                if response.status_code == 200:
+                    data = response.json()
+                    return data.get("models", [])
+                else:
+                    raise OllamaException(f"Failed to list models: {response.status_code}")
+
+        except httpx.ConnectError as e:
+            raise OllamaConnectionError(f"Cannot connect to Ollama service: {e}")
+        except httpx.TimeoutException as e:
+            raise OllamaTimeoutError(f"Ollama service timeout: {e}")
+        except OllamaException:
+            raise
+        except Exception as e:
+            raise OllamaException(f"Error listing models: {e}")
 
     
