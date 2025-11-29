@@ -1,38 +1,42 @@
-#by taha
+
 
 from enum import Enum
 from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
-#PDF parser types
 class ParserType(str, Enum):
-    
+    """PDF parser types."""
+
     DOCLING = "docling"
     GROBID = "grobid"  # For future use
 
 
-#Represents a section of a paper
 class PaperSection(BaseModel):
+    """Represents a section of a paper."""
 
     title: str = Field(..., description="Section title")
     content: str = Field(..., description="Section content")
     level: int = Field(default=1, description="Section hierarchy level")
 
-#Represents a figure in a paper
+
 class PaperFigure(BaseModel):
+    """Represents a figure in a paper."""
 
     caption: str = Field(..., description="Figure caption")
     id: str = Field(..., description="Figure identifier")
 
-Represents a table in a paper
+
 class PaperTable(BaseModel):
+    """Represents a table in a paper."""
 
     caption: str = Field(..., description="Table caption")
     id: str = Field(..., description="Table identifier")
 
-#PDF-specific content extracted by parsers like Docling
+
 class PdfContent(BaseModel):
+    """PDF-specific content extracted by parsers like Docling."""
 
     sections: List[PaperSection] = Field(default_factory=list, description="Paper sections")
     figures: List[PaperFigure] = Field(default_factory=list, description="Figures")
@@ -42,8 +46,9 @@ class PdfContent(BaseModel):
     parser_used: ParserType = Field(..., description="Parser used for extraction")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Parser metadata")
 
-#Paper metadata from arXiv API
+
 class ArxivMetadata(BaseModel):
+    """Paper metadata from arXiv API."""
 
     title: str = Field(..., description="Paper title from arXiv")
     authors: List[str] = Field(..., description="Authors from arXiv")
@@ -53,8 +58,9 @@ class ArxivMetadata(BaseModel):
     published_date: str = Field(..., description="Publication date")
     pdf_url: str = Field(..., description="PDF download URL")
 
-#Complete paper data combining arXiv metadata and PDF content
+
 class ParsedPaper(BaseModel):
+    """Complete paper data combining arXiv metadata and PDF content."""
 
     arxiv_metadata: ArxivMetadata = Field(..., description="Metadata from arXiv API")
     pdf_content: Optional[PdfContent] = Field(None, description="Content extracted from PDF")
